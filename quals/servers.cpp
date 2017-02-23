@@ -17,6 +17,10 @@ struct Edge {
   int c, l;
 
   Edge(int c, int l) : c(c), l(l) {}
+
+  bool operator < (const Edge& other) const {
+    return l < other.l;
+  }
 };
 
 struct Request {
@@ -35,6 +39,21 @@ vector<Request> requests;
 
 struct Solution {
   vector<int> caches[MAX_C];
+  int load[MAX_C];
+
+  Solution() {
+    for (int i = 0; i < C; ++i) load[i] = 0;
+  }
+
+  void print() {
+    cout << C << endl;
+    for (int c = 0; c < C; ++c) {
+      for (int v : caches[c]) {
+        cout << v << " ";
+      }
+      cout << endl;
+    }
+  }
 };
 
 void
@@ -52,7 +71,7 @@ read_input() {
     for (int j = 0; j < nb_caches[i]; ++j) {
       int c, l;
       cin >> c >> l;
-      edges[i].push_back(make_pair(c, l));
+      edges[i].push_back(Edge(c, l));
     }
   }
 
@@ -63,16 +82,64 @@ read_input() {
   }
 }
 
-void
-solve() {
+int min_latency[MAX_E];
 
+void
+precompute_min_latencies() {
+  for (int e = 0; e < E; ++e) {
+    min_latency[e] = latencies[e];
+    for (const Edge& edge : edges[e]) {
+      min_latency[e] = min(min_latency[e], edge.l);
+    }
+  }
+}
+
+struct SortByMagic {
+  bool operator() (const Request& r1, const Request& r2) const {
+    return r1.n * (latencies[r1.e] - min_latency[r1.e]) >
+      r2.n * (latencies[r2.e] - min_latency[r2.e]);
+  }
+};
+
+inline bool
+contains(const vector<int>& v, int val) {
+  for (int x : v) {
+    if (x == val) return true;
+  }
+
+  return false;
+}
+
+Solution
+solve() {
+  precompute_min_latencies();
+  sort(requests.begin(), requests.end(), SortByMagic());
+  for (int e = 0; e < E; ++e) {
+    sort(edges[e].begin(), edges[e].end());
+  }
+
+  Solution sol;
+  for (const Request& req : requests) {
+    for (const Edge& edge : edges[req.e]) {
+      if (contains(sol.caches[edge.c], req.v)) break;
+      if (sol.load[edge.c] + videos[req.v] <= X) {
+        sol.load[edge.c] += videos[req.v];
+        sol.caches[edge.c].push_back(req.v);
+        break;
+      }
+    }
+  }
+
+  return sol;
 }
 
 int
 main() {
   read_input();
 
-  solve();
+  Solution sol = solve();
+
+  sol.print();
 
   return 0;
 }
