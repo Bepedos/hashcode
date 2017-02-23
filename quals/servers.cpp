@@ -25,7 +25,8 @@ struct Edge {
 
 struct Request {
   int v, e, n;
-
+  int done = 0;
+  
   Request(int v, int e, int n) : v(v), e(e), n(n) {}
 };
 
@@ -36,6 +37,23 @@ int latencies[MAX_E];
 int nb_caches[MAX_E];
 vector<Edge> edges[MAX_E];
 vector<Request> requests;
+
+// int N;
+
+// void read_sol(){
+//   Solution sol;
+//   cin >> N;
+//   for(int i=0;i<N;i++){
+//     int c;
+//     int v;
+//     cin >> c;
+//     string str;
+//     getline (cin, str);
+//     stringstream ss(str);
+//     while (ss >> x)
+//       sol.caches[c].push_back(v);
+//   }
+// }
 
 struct Solution {
   vector<int> caches[MAX_C];
@@ -177,23 +195,8 @@ void build_adjacency_matrix_e_c(){
 
 pair<double,double> compute_score(Solution solution){
   build_adjacency_matrix_e_c();
-  // cerr << "printing endpoint to cache matrix" << endl;
-  // for(int e=0;e<E;e++){
-  //   for(int c=0;c<C;c++){
-  //     cerr << adjacency_e_c[e][c] << " ";
-  //   }
-  //   cerr << endl;
-  // }
   
   build_adjacency_matrix_c_v(solution);
-
-  // cerr << "printing cache to video matrix" << endl;
-  // for(int c=0;c<C;c++){
-  //   for(int v=0;v<V;v++){
-  //     cerr << adjacency_c_v[c][v] << " ";
-  //   }
-  //   cerr << endl;
-  // }
 
   double score = 0;
   int cumulated_requests = 0; // we will count the total number of requests
@@ -218,15 +221,135 @@ pair<double,double> compute_score(Solution solution){
 	}
       }
     }
-    // cerr << "  minimal latency: " << min_latency << endl;
-    // cerr << "  time saved per request: " << (datacenter_latency - min_latency) << endl;
-    // cerr << "  number of requests: " << number_requests << endl;
     score += ((double) ((double) datacenter_latency - (double) min_latency)) * (double) number_requests;
   }
   double normalized_score = ((double) score) * (double) 1000 / (double) cumulated_requests;
   return (make_pair(score,normalized_score));
 }
 
+
+int latency_matrix[MAX_V][MAX_E];
+
+int cost_alternate(Request req,int idx_best_cache){
+  return(max(0,req.n * (latency_matrix[req.v][req.e] - edges[req.e][idx_best_cache].l)));
+}
+
+void initialize_latency_matrix(){
+  for(int v=0;v<V;v++){
+    for(int e=0;e<E;e++){
+      latency_matrix[v][e] = latencies[e];
+    }
+  };
+}
+
+void update_latency_matrix(int v,int c){
+  for(int e =0;e<E;e++){
+    if(adjacency_e_c[e][c] != 0){
+      latency_matrix[v][e] = min(latency_matrix[v][e],adjacency_e_c[e][c]);
+    }
+  }
+}
+
+struct SortEdges {
+  bool operator() (const Edge& e1, const Edge& e2) const {
+    return (e1.l < e2.l);
+  }
+};
+
+
+void sort_best_cache(int e){
+  sort(edges[e].begin(),edges[e].end(),SortEdges());
+  }
+
+Solution alternate_solve(){
+  build_adjacency_matrix_e_c();
+  initialize_latency_matrix();
+  
+  int idx_best_cache[E]; // index of best cache for each endpoint
+  int best_cache[E];
+
+  int count_endpoints[C];
+  for(int c=0;c<C;c++){
+    count_endpoints[c] = 0;
+  }
+  for(int e=0;e<E;e++)
+    {
+      sort_best_cache(e);
+      idx_best_cache[e] = 0;
+      int cache = edges[e][idx_best_cache[e]].c;
+      best_cache[e] = cache;
+      count_endpoints[cache]+=1;//TODO : instead of 1, a weight
+    }
+
+  Solution sol;
+  
+  bool b = true;
+  while(b){
+    b = false;
+    for(int e=0;e<E;e++){
+      if(idx_best_cache[e] < edges[e].size())
+	b = true;
+    }
+  
+  int cur_best_cache = 0;
+  for(int c=0;c<C;c++)
+    {
+      if(count_endpoints[c]>count_endpoints[cur_best_cache])
+	cur_best_cache = c;
+    }
+  vector<int> best_cache_endpoints;
+  for(int e=0;e<E;e++){
+    if(edges[e][idx_best_cache[e]].c == cur_best_cache)
+      best_cache_endpoints.push_back(e);
+    }
+
+  int cost_videos[V];
+  vector<Request> request_per_vid[V];
+  
+  for(int v=0;v<V;v++){
+    cost_videos[v] = 0;
+  }
+  
+  for(int i=0;i< requests.size();i++){
+    Request req = requests[i];
+    if(!(req.done)){
+      int v = req.v;
+      int e = req.e;
+      
+      if(contains(best_cache_endpoints,e)){
+	cost_videos[v] += cost_alternate(req,idx_best_cache[e]);
+	request_per_vid[v].push_back(req);
+      }
+    }
+  }
+
+  vector<Edge> t;
+  for(int v=0;v<V;v++){
+    t.push_back(Edge(v,cost_videos[v]));
+  }
+
+  sort(t.begin(),t.end(),SortEdges());
+
+  int best_cache_fill = 0;
+  for(int i=t.size()-1;i>=0;i--){
+    int v = t[i].c;
+    if(best_cache_fill + videos[v] <= X){
+      sol.caches[cur_best_cache].push_back(v);
+      for(int j=0;j<request_per_vid[v].size();j++){
+	request_per_vid[v][j].done = 1;
+      }
+      best_cache_fill += videos[v];
+      update_latency_matrix(v,t[i].c);
+    }
+  }
+
+  for(int i = 0; i < best_cache_endpoints.size(); i++){
+    idx_best_cache[best_cache_endpoints[i]]++;
+  }
+  }
+  return sol;
+
+}
 
 Solution
 solve() {
@@ -256,7 +379,7 @@ int
 main() {
   read_input();
 
-  Solution sol = solve();
+  Solution sol = alternate_solve();
 
   sol.print();
   
