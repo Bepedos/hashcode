@@ -83,24 +83,8 @@ read_input() {
   }
 }
 
+int cur_latency[MAX_E][MAX_V];
 int min_latency[MAX_E];
-
-void
-precompute_min_latencies() {
-  for (int e = 0; e < E; ++e) {
-    min_latency[e] = latencies[e];
-    for (const Edge& edge : edges[e]) {
-      min_latency[e] = min(min_latency[e], edge.l);
-    }
-  }
-}
-
-struct SortByMagic {
-  bool operator() (const Request& r1, const Request& r2) const {
-    return r1.n * (latencies[r1.e] - min_latency[r1.e]) >
-      r2.n * (latencies[r2.e] - min_latency[r2.e]);
-  }
-};
 
 inline bool
 contains(const vector<int>& v, int val) {
@@ -111,6 +95,42 @@ contains(const vector<int>& v, int val) {
   return false;
 }
 
+void
+precompute_cur_latencies(const Solution& sol) {
+  for (int e = 0; e < E; ++e) {
+    for (int v = 0; v < V; ++v) {
+      cur_latency[e][v] = latencies[e];
+      for (const Edge& edge : edges[e]) {
+        if (contains(sol.caches[edge.c], v)) {
+          cur_latency[e][v] = min(cur_latency[e][v], edge.l);
+        }
+      }
+    }
+  }
+}
+
+void
+precompute_min_latencies() {
+  for (int e = 0; e < E; ++e) {
+    min_latency[e] = latencies[e];
+  }
+
+  for (int e = 0; e < E; ++e) {
+    min_latency[e] = latencies[e];
+    for (const Edge& edge : edges[e]) {
+      min_latency[e] = min(min_latency[e], edge.l);
+    }
+  }
+}
+
+struct SortByMagic {
+  bool operator() (const Request& r1, const Request& r2) const {
+    return r1.n * (cur_latency[r1.e][r1.v] - min_latency[r1.e]) >
+      r2.n * (cur_latency[r2.e][r2.v] - min_latency[r2.e]);
+  }
+};
+
+
 Solution
 solve() {
   precompute_min_latencies();
@@ -120,7 +140,14 @@ solve() {
   }
 
   Solution sol;
+  int i = 0;
   for (const Request& req : requests) {
+    // if (i % 100 == 0) {
+    //   precompute_cur_latencies(sol);
+    //   sort(requests.begin() + i + 1, requests.end(), SortByMagic());
+    // }
+    // i++;
+
     for (const Edge& edge : edges[req.e]) {
       if (contains(sol.caches[edge.c], req.v)) break;
       if (sol.load[edge.c] + videos[req.v] <= X) {
