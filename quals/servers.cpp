@@ -48,8 +48,9 @@ struct Solution {
   void print() {
     cout << C << endl;
     for (int c = 0; c < C; ++c) {
+      cout << c;
       for (int v : caches[c]) {
-        cout << v << " ";
+        cout << " " << v;
       }
       cout << endl;
     }
