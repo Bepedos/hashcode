@@ -110,7 +110,7 @@ precompute_cur_latencies(const Solution& sol) {
 }
 
 void
-precompute_min_latencies() {
+precompute_min_latencies() { //const Solution& sol) {
   for (int e = 0; e < E; ++e) {
     min_latency[e] = latencies[e];
   }
@@ -118,7 +118,9 @@ precompute_min_latencies() {
   for (int e = 0; e < E; ++e) {
     min_latency[e] = latencies[e];
     for (const Edge& edge : edges[e]) {
-      min_latency[e] = min(min_latency[e], edge.l);
+      //      if (sol.load[edge.c] < X) {
+        min_latency[e] = min(min_latency[e], edge.l);
+        //      }
     }
   }
 }
@@ -133,21 +135,15 @@ struct SortByMagic {
 
 Solution
 solve() {
+  Solution sol;
   precompute_min_latencies();
+  precompute_cur_latencies(sol);
   sort(requests.begin(), requests.end(), SortByMagic());
   for (int e = 0; e < E; ++e) {
     sort(edges[e].begin(), edges[e].end());
   }
 
-  Solution sol;
-  int i = 0;
   for (const Request& req : requests) {
-    // if (i % 100 == 0) {
-    //   precompute_cur_latencies(sol);
-    //   sort(requests.begin() + i + 1, requests.end(), SortByMagic());
-    // }
-    // i++;
-
     for (const Edge& edge : edges[req.e]) {
       if (contains(sol.caches[edge.c], req.v)) break;
       if (sol.load[edge.c] + videos[req.v] <= X) {
