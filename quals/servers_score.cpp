@@ -146,20 +146,24 @@ void build_adjacency_matrix_c_v(Solution solution){
 
   for(int c=0;c<C;c++){
     for(int i=0;i<solution.caches[c].size();i++){
-      adjacency_c_v[c][i] = 1;
+      adjacency_c_v[c][solution.caches[c][i]] = 1;
     }
   }
 }
 
 void build_adjacency_matrix_e_c(){
-  for(int e = 0;e < E;e++){
+  cerr << "building adjacency endpoint to cache matrix" << endl;
+  for(int e=0;e<E;e++){
     for(int c=0;c<C;c++){
       adjacency_e_c[e][c] = 0;
     }
   };
 
-  for(int e = 0;e < E;e++){
+  cerr << "there are" << E << " endpoints" << endl;
+  for(int e = 0;e<E;e++){
+    cerr << "size edges: " << edges[e].size() << endl;
     for(int i=0;i<edges[e].size();i++){
+      // cerr << "considering edge" << i << " for endpoint " << e << endl;
       Edge edge = edges[e][i]; // edge from e to c
       int c = edge.c;
       int l = edge.l;
@@ -169,32 +173,58 @@ void build_adjacency_matrix_e_c(){
       adjacency_e_c[e][c] = l;
     }
   }
+  cerr << "done building adjacency endpoint to cache matrix" << endl;
 }
 
-pair<int,double> score(Solution solution){
+pair<double,double> compute_score(Solution solution){
   build_adjacency_matrix_e_c();
+  // cerr << "printing endpoint to cache matrix" << endl;
+  // for(int e=0;e<E;e++){
+  //   for(int c=0;c<C;c++){
+  //     cerr << adjacency_e_c[e][c] << " ";
+  //   }
+  //   cerr << endl;
+  // }
+  
   build_adjacency_matrix_c_v(solution);
-  int score = 0;
+
+  // cerr << "printing cache to video matrix" << endl;
+  // for(int c=0;c<C;c++){
+  //   for(int v=0;v<V;v++){
+  //     cerr << adjacency_c_v[c][v] << " ";
+  //   }
+  //   cerr << endl;
+  // }
+
+  double score = 0;
   int cumulated_requests = 0; // we will count the total number of requests
   for(int i=0;i< requests.size();i++){
     Request r = requests[i];
     int video = r.v;
     int endpoint = r.e;
+    // cerr << "treating request number " << i << " coming from endpoint " << endpoint << endl;
     int number_requests = r.n;
     cumulated_requests += r.n;
     int datacenter_latency = latencies[endpoint];
+    // cerr << "  datacenter latency: " << datacenter_latency << endl;
     int min_latency = datacenter_latency;
     for(int cache=0;cache<C;cache++){
-      if(adjacency_e_c[endpoint][cache] == 1){
-	int latency = adjacency_c_v[cache][video];
-	if(latency != 0){
-	  min_latency = min(min_latency,latency);
+      if(adjacency_e_c[endpoint][cache] != 0){
+	// cerr << endpoint << " and " << cache << " are connected" << endl;
+	if(adjacency_c_v[cache][video] ==1){
+	  int latency = adjacency_e_c[endpoint][cache];
+	  if(latency != 0){
+	    min_latency = min(min_latency,latency);
+	  }
 	}
       }
     }
-    score += (datacenter_latency - min_latency) * number_requests;
+    // cerr << "  minimal latency: " << min_latency << endl;
+    // cerr << "  time saved per request: " << (datacenter_latency - min_latency) << endl;
+    // cerr << "  number of requests: " << number_requests << endl;
+    score += ((double) ((double) datacenter_latency - (double) min_latency)) * (double) number_requests;
   }
-  double normalized_score = ((double) (score * 1000)) / (double) cumulated_requests;
+  double normalized_score = ((double) score) * (double) 1000 / (double) cumulated_requests;
   return (make_pair(score,normalized_score));
 }
 
@@ -207,7 +237,22 @@ main() {
 
   sol.print();
 
-  cerr << " " << score(sol).second << endl;
+  pair<double,double> score = compute_score(sol);
+  
+  cerr << "score:  unnormalized:" << score.first << " and normalized:  "  << score.second << endl;
+  
+  // Solution pdf_sol;
+  // pdf_sol.caches[0].push_back(2);
+  // pdf_sol.caches[1].push_back(3);
+  // pdf_sol.caches[1].push_back(1);
+
+  // pdf_sol.caches[2].push_back(0);
+  // pdf_sol.caches[2].push_back(1);
+
+  // pair<int,double> score = compute_score(pdf_sol);
+
+  // cerr << "score:  unnormalized:" << score.first << " and normalized:  "  << score.second << endl;
+
 
   return 0;
 }
