@@ -40,7 +40,7 @@ struct Solution {
 };
 
 void build_adjacency_matrix_c_v(Solution solution){
-  for(int c = 0;c < C;c++){
+  for(int c = 0;c<C;c++){
     for(int v=0;v<V;v++){
       adjacency_c_v[c][v] = 0;
     }
@@ -74,18 +74,20 @@ void build_adjacency_matrix_e_c(){
   }
 }
 
-double score(Solution solution){
+pair<int,double> score(Solution solution){
   vector<int> caches = solution.caches;
   build_adjacency_matrix_e_c();
   build_adjacency_matrix_c_v(solution);
-  double score = 0;
+  int score = 0;
+  int cumulated_requests = 0; // we will count the total number of requests
   for(int i=0;i< requests.size();i++){
     request r = requests[i];
     int video = r.v;
     int endpoint = r.e;
     int number_requests = r.n;
-    double datacenter_latency = latencies[e];
-    double min_latency = datacenter_latency;
+    cumulated_requests += r.n;
+    int datacenter_latency = latencies[e];
+    int min_latency = datacenter_latency;
     for(int cache=0;cache<C;cache++){
       if(adjacency_e_c[e][c] == 1){
 	int latency = adjacency_c_v[c][v];
@@ -96,7 +98,8 @@ double score(Solution solution){
     }
     score += (datacenter_latency - min_latency) * number_requests;
   }
-  return score;
+  double normalized_score = (score * 1000) / cumulated_requests;
+  return (make_pair(score,normalized_score));
 }
 
 
