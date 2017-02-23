@@ -12,6 +12,12 @@ using namespace std;
 const int MAX_E = 1000;
 const int MAX_V = 10000;
 
+struct Edge {
+  int c, l;
+
+  Edge(int c, int l) : c(c), l(l) {}
+};
+
 struct Request {
   int v, e, n;
 
@@ -23,7 +29,7 @@ int V, E, R, C, X;
 int videos[MAX_V];
 int latencies[MAX_E];
 int nb_caches[MAX_E];
-vector<pair<int, int> > edges[MAX_E];
+vector<Edge> edges[MAX_E];
 vector<Request> requests;
 
 void
