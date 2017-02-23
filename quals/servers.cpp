@@ -32,7 +32,7 @@ int latencies[MAX_E];
 int nb_caches[MAX_E];
 vector<Edge> edges[MAX_E];
 int adjacency_e_c[MAX_E][MAX_C]; // adjacency matrix between endpoints and caches
-int adjacency_c_v[MAX_C][MAX_V];
+int adjacency_c_v[MAX_C][MAX_V]; // adjacency matrix between caches and videos
 vector<Request> requests;
 
 struct Solution {
