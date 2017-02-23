@@ -9,6 +9,7 @@
 
 using namespace std;
 
+const int MAX_C = 1000;
 const int MAX_E = 1000;
 const int MAX_V = 10000;
 
@@ -31,6 +32,10 @@ int latencies[MAX_E];
 int nb_caches[MAX_E];
 vector<Edge> edges[MAX_E];
 vector<Request> requests;
+
+struct Solution {
+  vector<int> caches[MAX_C];
+};
 
 void
 read_input() {
