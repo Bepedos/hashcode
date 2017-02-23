@@ -31,11 +31,74 @@ int videos[MAX_V];
 int latencies[MAX_E];
 int nb_caches[MAX_E];
 vector<Edge> edges[MAX_E];
+int adjacency_e_c[MAX_E][MAX_C]; // adjacency matrix between endpoints and caches
+int adjacency_c_v[MAX_C][MAX_V];
 vector<Request> requests;
 
 struct Solution {
   vector<int> caches[MAX_C];
 };
+
+void build_adjacency_matrix_c_v(Solution solution){
+  for(int c = 0;c < C;c++){
+    for(int v=0;v<V;v++){
+      adjacency_c_v[c][v] = 0;
+    }
+  };
+
+  vector<int> caches = solution.caches;
+  for(int c=0;c<C;c++){
+    for(int i=0;i<caches[c].size();i++){
+      adjacency_c_v[c][v] = 1;
+    }
+  }
+}
+
+void build_adjacency_matrix_e_c(){
+  for(int e = 0;e < E;e++){
+    for(int c=0;c<C;c++){
+      adjacency_e_c[e][c] = 0;
+    }
+  };
+
+  for(int e = 0;e < E;e++){
+    for(int i=0;i<edges.size();i++){
+      Edge edge = edges[i]; // edge from e to c
+      int c = edge.c;
+      int l = edge.l;
+      if(l == 0){
+	cerr << "something went wrong, latency should not be 0!!!" << endl;
+      }
+      adjacency_e_c[e][c] = l;
+    }
+  }
+}
+
+double score(Solution solution){
+  vector<int> caches = solution.caches;
+  build_adjacency_matrix_e_c();
+  build_adjacency_matrix_c_v(solution);
+  double score = 0;
+  for(int i=0;i< requests.size();i++){
+    request r = requests[i];
+    int video = r.v;
+    int endpoint = r.e;
+    int number_requests = r.n;
+    double datacenter_latency = latencies[e];
+    double min_latency = datacenter_latency;
+    for(int cache=0;cache<C;cache++){
+      if(adjacency_e_c[e][c] == 1){
+	int latency = adjacency_c_v[c][v];
+	if(latency != 0){
+	  min_latency = min(min_latency,latency);
+	}
+      }
+    }
+    score += (datacenter_latency - min_latency) * number_requests;
+  }
+  return score;
+}
+
 
 void
 read_input() {
