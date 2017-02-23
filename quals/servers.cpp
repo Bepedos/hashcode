@@ -46,10 +46,9 @@ void build_adjacency_matrix_c_v(Solution solution){
     }
   };
 
-  vector<int> caches = solution.caches;
   for(int c=0;c<C;c++){
-    for(int i=0;i<caches[c].size();i++){
-      adjacency_c_v[c][v] = 1;
+    for(int i=0;i<solution.caches[c].size();i++){
+      adjacency_c_v[c][i] = 1;
     }
   }
 }
@@ -62,8 +61,8 @@ void build_adjacency_matrix_e_c(){
   };
 
   for(int e = 0;e < E;e++){
-    for(int i=0;i<edges.size();i++){
-      Edge edge = edges[i]; // edge from e to c
+    for(int i=0;i<edges[e].size();i++){
+      Edge edge = edges[e][i]; // edge from e to c
       int c = edge.c;
       int l = edge.l;
       if(l == 0){
@@ -75,22 +74,21 @@ void build_adjacency_matrix_e_c(){
 }
 
 pair<int,double> score(Solution solution){
-  vector<int> caches = solution.caches;
   build_adjacency_matrix_e_c();
   build_adjacency_matrix_c_v(solution);
   int score = 0;
   int cumulated_requests = 0; // we will count the total number of requests
   for(int i=0;i< requests.size();i++){
-    request r = requests[i];
+    Request r = requests[i];
     int video = r.v;
     int endpoint = r.e;
     int number_requests = r.n;
     cumulated_requests += r.n;
-    int datacenter_latency = latencies[e];
+    int datacenter_latency = latencies[endpoint];
     int min_latency = datacenter_latency;
     for(int cache=0;cache<C;cache++){
-      if(adjacency_e_c[e][c] == 1){
-	int latency = adjacency_c_v[c][v];
+      if(adjacency_e_c[endpoint][cache] == 1){
+	int latency = adjacency_c_v[cache][video];
 	if(latency != 0){
 	  min_latency = min(min_latency,latency);
 	}
@@ -98,7 +96,7 @@ pair<int,double> score(Solution solution){
     }
     score += (datacenter_latency - min_latency) * number_requests;
   }
-  double normalized_score = (score * 1000) / cumulated_requests;
+  double normalized_score = ((double) (score * 1000)) / (double) cumulated_requests;
   return (make_pair(score,normalized_score));
 }
 
