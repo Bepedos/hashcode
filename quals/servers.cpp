@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <cstdio>
 #include <vector>
@@ -23,18 +24,31 @@ struct Edge {
   }
 };
 
-struct Request {
-  int v, e, n;
-
-  Request(int v, int e, int n) : v(v), e(e), n(n) {}
-};
-
 int V, E, R, C, X;
+
+int cur_latency[MAX_E][MAX_V];
+int min_latency[MAX_E];
 
 int videos[MAX_V];
 int latencies[MAX_E];
 int nb_caches[MAX_E];
 vector<Edge> edges[MAX_E];
+
+
+struct Request {
+  int v, e, n;
+
+  Request(int v, int e, int n) : v(v), e(e), n(n) {}
+
+  double score() const {
+    return (double)(n * (cur_latency[e][v] - min_latency[e])) * exp(-0.0005 * (double)(videos[v]));
+  }
+
+  bool operator < (const Request& other) const {
+    return score() > other.score();
+  }
+};
+
 vector<Request> requests;
 
 struct Solution {
@@ -83,9 +97,6 @@ read_input() {
   }
 }
 
-int cur_latency[MAX_E][MAX_V];
-int min_latency[MAX_E];
-
 inline bool
 contains(const vector<int>& v, int val) {
   for (int x : v) {
@@ -110,7 +121,7 @@ precompute_cur_latencies(const Solution& sol) {
 }
 
 void
-precompute_min_latencies() { //const Solution& sol) {
+precompute_min_latencies(const Solution& sol) {
   for (int e = 0; e < E; ++e) {
     min_latency[e] = latencies[e];
   }
@@ -118,17 +129,17 @@ precompute_min_latencies() { //const Solution& sol) {
   for (int e = 0; e < E; ++e) {
     min_latency[e] = latencies[e];
     for (const Edge& edge : edges[e]) {
-      //      if (sol.load[edge.c] < X) {
+      if (sol.load[edge.c] < X - 30) {
         min_latency[e] = min(min_latency[e], edge.l);
-        //      }
+      }
     }
   }
 }
 
 struct SortByMagic {
   bool operator() (const Request& r1, const Request& r2) const {
-    return r1.n * (cur_latency[r1.e][r1.v] - min_latency[r1.e]) >
-      r2.n * (cur_latency[r2.e][r2.v] - min_latency[r2.e]);
+    return (double)(r1.n * (cur_latency[r1.e][r1.v] - min_latency[r1.e])) / (double)(videos[r1.v]) >
+      (double)(r2.n * (cur_latency[r2.e][r2.v] - min_latency[r2.e])) / (double)(videos[r2.v]);
   }
 };
 
@@ -136,14 +147,26 @@ struct SortByMagic {
 Solution
 solve() {
   Solution sol;
-  precompute_min_latencies();
+  precompute_min_latencies(sol);
   precompute_cur_latencies(sol);
-  sort(requests.begin(), requests.end(), SortByMagic());
+  sort(requests.begin(), requests.end());
   for (int e = 0; e < E; ++e) {
     sort(edges[e].begin(), edges[e].end());
   }
 
-  for (const Request& req : requests) {
+  for (int i = 0; i < R; ++i) {
+    cerr << i << endl;
+    const Request& req = requests[i];
+    //  for (const Request& req : requests) {
+    if (i % 500 == 0) {
+      precompute_min_latencies(sol);
+      precompute_cur_latencies(sol);
+      sort(requests.begin() + i + 1, requests.end());
+    }
+
+    //    random_shuffle(edges[req.e].begin(), edges[req.e].end());
+
+
     for (const Edge& edge : edges[req.e]) {
       if (contains(sol.caches[edge.c], req.v)) break;
       if (sol.load[edge.c] + videos[req.v] <= X) {
